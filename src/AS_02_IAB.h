@@ -61,7 +61,7 @@ namespace AS_02 {
       virtual ~MXFWriter();
 
       /**
-       * Must be preceded by a succesful OpenWrite() call followed by zero or more WriteFrame() calls
+       * Must be preceded by a successful OpenWrite() call followed by zero or more WriteFrame() calls
        *
        * Warning: direct manipulation of MXF structures can interfere
        * with the normal operation of the wrapper.  Caveat emptor!
@@ -150,7 +150,19 @@ namespace AS_02 {
        * @return RESULT_OK indicates that the frame is written and additional frames can be written, 
        * otherwise the reader is reset and the file is left is an undermined state.
        */
-      Result_t Finalize();
+      Result_t FinalizeMxf();
+
+      Result_t FinalizeClip();
+      Result_t WriteMetadata(const std::string &trackLabel, const std::string &mimeType, const std::string &dataDescription, const ASDCP::FrameBuffer& metadata_buf);
+
+      // Writes an XML text document to the MXF file as per RP 2057. If the
+      // optional AESEncContext argument is present, the document is encrypted
+      // prior to writing. Fails if the file is not open, is finalized, or an
+      // operating system error occurs.
+      Result_t AddDmsGenericPartUtf8Text(const ASDCP::FrameBuffer& frame_buffer, ASDCP::AESEncContext* enc = 0, ASDCP::HMACContext* hmac = 0);
+
+      ui32_t m_GenericStreamID;
+      ui32_t m_NextTrackID;
     };
 
     /**
@@ -219,6 +231,13 @@ namespace AS_02 {
        */
       Result_t OpenRead(const std::string& filename);
 
+      Result_t GetMDObjectByType(MDD_t ObjectID, InterchangeObject* Object) {
+        return this->m_Reader->m_HeaderPart.GetMDObjectByType(this->m_Reader->m_Dict->Type(ObjectID).ul, &Object);
+      }
+      Result_t GetMDObjectsByType(MDD_t ObjectID, std::list<InterchangeObject*>& ObjectList) {
+        return this->m_Reader->m_HeaderPart.GetMDObjectsByType(this->m_Reader->m_Dict->Type(ObjectID).ul, ObjectList);
+      };
+
       /**
        * Closes the IAB Track File.
        *
@@ -243,6 +262,7 @@ namespace AS_02 {
        * otherwise the file is closed and the reader reset
        */
       Result_t ReadFrame(ui32_t frame_number, Frame& frame);
+      Result_t ReadMetadata(const std::string &description, std::string &mimeType, ASDCP::FrameBuffer&);
 
       /**
        * Reads an IA Frame.

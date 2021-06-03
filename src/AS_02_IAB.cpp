@@ -46,18 +46,16 @@ namespace Kumu {
   };
 }
 
-//
+//------------------------------------------------------------------------------------------
 class AS_02::IAB::MXFWriter::h__Writer : public h__AS02Writer<AS_02::MXF::AS02IndexWriterVBR>
 {
   ASDCP_NO_COPY_CONSTRUCT(h__Writer);
   h__Writer();
 public:
     WriterState_t m_State;
-
   h__Writer(const Dictionary *d) : h__AS02Writer(d), m_State(ST_BEGIN) {}
   virtual ~h__Writer(){}
 };
-
 //
 class AS_02::IAB::MXFReader::h__Reader : public h__AS02Reader
 {
@@ -65,12 +63,10 @@ class AS_02::IAB::MXFReader::h__Reader : public h__AS02Reader
   h__Reader();
 public:
   ReaderState_t m_State;
-
   h__Reader(const Dictionary *d, const Kumu::IFileReaderFactory& fileReaderFactory) :
     h__AS02Reader(d, fileReaderFactory), m_State(ST_READER_BEGIN) {}
   virtual ~h__Reader(){}
 };
-
 //------------------------------------------------------------------------------------------
 
 /* Size of the BER Length of the clip */
@@ -105,12 +101,12 @@ AS_02::IAB::MXFWriter::RIP() const {
 
 Kumu::Result_t
 AS_02::IAB::MXFWriter::OpenWrite(
-  const std::string& filename,
-  const ASDCP::WriterInfo& Info,
-  const ASDCP::MXF::IABSoundfieldLabelSubDescriptor& sub,
-  const std::vector<ASDCP::UL>& conformsToSpecs,
-  const ASDCP::Rational& edit_rate,
-  const ASDCP::Rational& sample_rate) {
+    const std::string& filename,
+    const ASDCP::WriterInfo& Info,
+    const ASDCP::MXF::IABSoundfieldLabelSubDescriptor& sub,
+    const std::vector<ASDCP::UL>& conformsToSpecs,
+    const ASDCP::Rational& edit_rate,
+    const ASDCP::Rational& sample_rate) {
 
   /* are we already running */
 
@@ -189,13 +185,13 @@ AS_02::IAB::MXFWriter::OpenWrite(
     /* WriteAS02Header() takes ownership of desc and subdesc */
 
     result = this->m_Writer->WriteAS02Header(
-      "Clip wrapping of IA bitstreams as specified in SMPTE ST 2067-201",
-      UL(this->m_Writer->m_Dict->ul(MDD_IMF_IABEssenceClipWrappedContainer)),
-      "IA Bitstream",
-      UL(element_ul_bytes),
-      UL(this->m_Writer->m_Dict->ul(MDD_SoundDataDef)),
-      edit_rate,
-      &conformsToSpecs
+        "Clip wrapping of IA bitstreams as specified in SMPTE ST 2067-201",
+        UL(this->m_Writer->m_Dict->ul(MDD_IMF_IABEssenceClipWrappedContainer)),
+        "IA Bitstream",
+        UL(element_ul_bytes),
+        UL(this->m_Writer->m_Dict->ul(MDD_SoundDataDef)),
+        edit_rate,
+        &conformsToSpecs
     );
 
     if (result.Failure()) {
@@ -240,12 +236,13 @@ AS_02::IAB::MXFWriter::OpenWrite(
 
 Result_t
 AS_02::IAB::MXFWriter::WriteFrame(const ui8_t* frame, ui32_t sz) {
+
   /* are we running */
 
   if (this->m_Writer->m_State == ST_BEGIN) {
     return Kumu::RESULT_INIT;
   }
-
+  
   if (sz == 0) {
     DefaultLogSink().Error("The frame buffer size is zero.\n");
     return RESULT_PARAM;
@@ -254,6 +251,7 @@ AS_02::IAB::MXFWriter::WriteFrame(const ui8_t* frame, ui32_t sz) {
   Result_t result = Kumu::RESULT_OK;
 
   /* update the index */
+
   IndexTableSegment::IndexEntry Entry;
 
   Entry.StreamOffset = this->m_Writer->m_StreamOffset;
@@ -300,7 +298,7 @@ AS_02::IAB::MXFWriter::AddDmsGenericPartUtf8Text(const ASDCP::FrameBuffer& Frame
 }
 
 Result_t
-AS_02::IAB::MXFWriter::Finalize() {
+AS_02::IAB::MXFWriter::FinalizeClip() {
 
   /* are we running */
 
@@ -311,7 +309,6 @@ AS_02::IAB::MXFWriter::Finalize() {
     KM_RESULT_STATE_HERE();
     return RESULT_STATE;
   }
-
 
   Result_t result = RESULT_OK;
 
@@ -344,9 +341,22 @@ AS_02::IAB::MXFWriter::Finalize() {
     if (result.Failure()) {
       throw Kumu::RuntimeError(result);
     }
+  }
+  catch (Kumu::RuntimeError e) {
+    this->Reset();
+    result = e.GetResult();
+  }
+  return result;
+}
 
-    /* write footer */
 
+Result_t
+AS_02::IAB::MXFWriter::FinalizeMxf() {
+
+  Result_t result = RESULT_OK;
+
+  /* write footer */
+  try {
     result = this->m_Writer->WriteAS02Footer();
 
     if (result.Failure()) {
@@ -425,12 +435,11 @@ AS_02::IAB::MXFReader::OpenRead(const std::string& filename) {
     result = this->m_Reader->OpenMXFRead(filename);
 
     InterchangeObject* tmp_iobj = 0;
-
     if ( ASDCP_SUCCESS(result)){
       this->m_Reader->m_HeaderPart.GetMDObjectByType(
-        this->m_Reader->m_Dict->Type(MDD_IABEssenceDescriptor).ul,
-        &tmp_iobj
-    );
+          this->m_Reader->m_Dict->Type(MDD_IABEssenceDescriptor).ul,
+          &tmp_iobj
+      );
     }
 
     if (!tmp_iobj) {
@@ -439,8 +448,8 @@ AS_02::IAB::MXFReader::OpenRead(const std::string& filename) {
     }
 
     this->m_Reader->m_HeaderPart.GetMDObjectByType(
-      this->m_Reader->m_Dict->Type(MDD_IABSoundfieldLabelSubDescriptor).ul,
-      &tmp_iobj
+        this->m_Reader->m_Dict->Type(MDD_IABSoundfieldLabelSubDescriptor).ul,
+        &tmp_iobj
     );
 
     if (!tmp_iobj) {
@@ -451,8 +460,8 @@ AS_02::IAB::MXFReader::OpenRead(const std::string& filename) {
     std::list<InterchangeObject*> ObjectList;
 
     this->m_Reader->m_HeaderPart.GetMDObjectsByType(
-      this->m_Reader->m_Dict->Type(MDD_Track).ul,
-      ObjectList
+        this->m_Reader->m_Dict->Type(MDD_Track).ul,
+        ObjectList
     );
 
     if (ObjectList.empty()) {
@@ -503,11 +512,9 @@ Result_t AS_02::IAB::MXFReader::GetFrameCount(ui32_t& frameCount) const {
 
   return Kumu::RESULT_OK;
 }
-
 /* Anonymous namespace with ReadFrame helpers */
 namespace {
   bool checkFrameCapacity(ASDCP::FrameBuffer& frame, size_t size, bool reallocate_if_needed) {
-
     if (frame.Capacity() < size) {
       if (!reallocate_if_needed) {
         return false;
@@ -518,40 +525,41 @@ namespace {
     return true;
   }
 
-  Result_t
+Result_t
   ReadFrameImpl(ui32_t frame_number, ASDCP::FrameBuffer& frame, ReaderState_t& reader_state, AS_02::h__AS02Reader *reader, bool reallocate_if_needed) {
     assert(reader);
-    /* are we already running */
+
+  /* are we already running */
 
     if (reader_state == ST_READER_BEGIN) {
-      return Kumu::RESULT_INIT;
-    }
+    return Kumu::RESULT_INIT;
+  }
 
-    Result_t result = RESULT_OK;
+  Result_t result = RESULT_OK;
 
-    // look up frame index node
-    IndexTableSegment::IndexEntry index_entry;
+      // look up frame index node
+      IndexTableSegment::IndexEntry index_entry;
 
     result = reader->m_IndexAccess.Lookup(frame_number, index_entry);
 
-    if (result.Failure()) {
-      DefaultLogSink().Error("Frame value out of range: %u\n", frame_number);
+      if (result.Failure()) {
+        DefaultLogSink().Error("Frame value out of range: %u\n", frame_number);
       return result;
-    }
+      }
 
     result = reader->m_File->Seek(index_entry.StreamOffset);
 
-    if (result.Failure()) {
-      DefaultLogSink().Error("Cannot seek to stream offset: %u\n", index_entry.StreamOffset);
+      if (result.Failure()) {
+        DefaultLogSink().Error("Cannot seek to stream offset: %u\n", index_entry.StreamOffset);
       return result;
-    }
+      }
 
-    /* read the preamble info */
+      /* read the preamble info */
 
-    const int preambleTLLen = 5;
-    const int frameTLLen = 5;
+      const int preambleTLLen = 5;
+      const int frameTLLen = 5;
 
-    ui32_t buffer_offset = 0;
+      ui32_t buffer_offset = 0;
 
     if (!checkFrameCapacity(frame, preambleTLLen, reallocate_if_needed)) {
         return RESULT_SMALLBUF;
@@ -559,21 +567,21 @@ namespace {
 
     result = reader->m_File->Read(&frame.Data()[buffer_offset], preambleTLLen);
 
-    if (result.Failure()) {
-      DefaultLogSink().Error("Error reading IA Frame preamble\n", index_entry.StreamOffset);
+      if (result.Failure()) {
+        DefaultLogSink().Error("Error reading IA Frame preamble\n", index_entry.StreamOffset);
       return result;
-    }
+      }
 
     ui32_t preambleLen = ((ui32_t)frame.Data()[1 + buffer_offset] << 24) +
       ((ui32_t)frame.Data()[2 + buffer_offset] << 16) +
       ((ui32_t)frame.Data()[3 + buffer_offset] << 8) +
       (ui32_t)frame.Data()[4 + buffer_offset];
 
-    buffer_offset += preambleTLLen;
+      buffer_offset += preambleTLLen;
 
-    /* read the preamble*/
+      /* read the preamble*/
 
-    if (preambleLen > 0) {
+      if (preambleLen > 0) {
 
       if (!checkFrameCapacity(frame, preambleTLLen + preambleLen, reallocate_if_needed)) {
         return RESULT_SMALLBUF;
@@ -581,16 +589,16 @@ namespace {
 
       result = reader->m_File->Read(&frame.Data()[buffer_offset], preambleLen);
 
-      if (result.Failure()) {
-        DefaultLogSink().Error("Error reading IA Frame preamble\n", index_entry.StreamOffset);
+        if (result.Failure()) {
+          DefaultLogSink().Error("Error reading IA Frame preamble\n", index_entry.StreamOffset);
         return result;
+        }
+
+        buffer_offset += preambleLen;
+
       }
 
-      buffer_offset += preambleLen;
-
-    }
-
-    /* read the IA Frame info */
+      /* read the IA Frame info */
 
     if (!checkFrameCapacity(frame,  preambleTLLen + preambleLen + frameTLLen, reallocate_if_needed)) {
       return RESULT_SMALLBUF;
@@ -598,41 +606,47 @@ namespace {
 
     result = reader->m_File->Read(&frame.Data()[buffer_offset], frameTLLen);
 
-    if (result.Failure()) {
-      DefaultLogSink().Error("Error reading IA Frame data\n", index_entry.StreamOffset);
+      if (result.Failure()) {
+        DefaultLogSink().Error("Error reading IA Frame data\n", index_entry.StreamOffset);
       return result;
-    }
+      }
 
     ui32_t frameLen = ((ui32_t)frame.Data()[buffer_offset + 1] << 24) +
       ((ui32_t)frame.Data()[buffer_offset + 2] << 16) +
       ((ui32_t)frame.Data()[buffer_offset + 3] << 8) +
       (ui32_t)frame.Data()[buffer_offset + 4];
 
-    buffer_offset += frameTLLen;
+      buffer_offset += frameTLLen;
 
-    /* read the IA Frame */
+      /* read the IA Frame */
 
-    if (frameLen > 0) {
-
+      if (frameLen > 0) {
       if (!checkFrameCapacity(frame, preambleTLLen + preambleLen + frameTLLen + frameLen, reallocate_if_needed)) {
         return RESULT_SMALLBUF;
       }
+
       frame.Size(preambleTLLen + preambleLen + frameTLLen + frameLen);
 
       result = reader->m_File->Read(&frame.Data()[buffer_offset], frameLen);
 
-      if (result.Failure()) {
-        DefaultLogSink().Error("Error reading IA Frame data\n", index_entry.StreamOffset);
+        if (result.Failure()) {
+          DefaultLogSink().Error("Error reading IA Frame data\n", index_entry.StreamOffset);
         return result;
+        }
+
+
       }
-    }
+
 
     reader_state = ST_READER_RUNNING;
 
-    return result;
-  }
-} // namespace
 
+
+    return result;
+
+    }
+
+  }
 Result_t AS_02::IAB::MXFReader::ReadFrame(ui32_t frame_number,
                                           AS_02::IAB::MXFReader::Frame &frame) {
   assert(!this->m_Reader.empty());
@@ -640,10 +654,11 @@ Result_t AS_02::IAB::MXFReader::ReadFrame(ui32_t frame_number,
                                   this->m_Reader->m_State, this->m_Reader, true);
 
   frame = std::pair<size_t, const ui8_t *>(this->m_FrameBuffer.Size(),
+
                                            this->m_FrameBuffer.Data());
+
   return result;
 }
-
 Result_t AS_02::IAB::MXFReader::ReadFrame(ui32_t frame_number,
                                           ASDCP::FrameBuffer &frame) {
   return ReadFrameImpl(frame_number, frame, this->m_Reader->m_State, this->m_Reader,
@@ -657,10 +672,8 @@ AS_02::IAB::MXFReader::ReadGenericStreamPartitionPayload(const ui32_t SID, ASDCP
     {
       return m_Reader->ReadGenericStreamPartitionPayload(SID, frame_buf, 0, 0 /*no encryption*/);
     }
-
   return RESULT_INIT;
 }
-
 Result_t
 AS_02::IAB::MXFReader::FillWriterInfo(WriterInfo& Info) const {
   /* are we already running */
@@ -697,6 +710,151 @@ AS_02::IAB::MXFReader::Reset() {
 
   this->m_Reader.set(0);
 }
+
+Result_t
+AS_02::IAB::MXFReader::ReadMetadata(const std::string &description, std::string &mimeType, ASDCP::FrameBuffer& FrameBuffer)
+{
+  if ( ! m_Reader->m_File.IsOpen() )
+  {
+    return RESULT_INIT;
+  }
+
+  Result_t result = RESULT_OK;
+
+  std::list<InterchangeObject*> objects;
+  if (KM_SUCCESS(m_Reader->m_HeaderPart.GetMDObjectsByType(m_Reader->OBJ_TYPE_ARGS(GenericStreamTextBasedSet), objects)))
+  {
+    for (std::list<InterchangeObject*>::iterator it = objects.begin(); it != objects.end(); it++)
+    {
+      GenericStreamTextBasedSet* set = static_cast<GenericStreamTextBasedSet*>(*it);
+      if (set->TextDataDescription == description)
+      {
+        mimeType = set->TextMIMEMediaType;
+        unsigned int GSBodySID = set->GenericStreamSID;
+
+        // need to find GSPartition with the given SID
+        RIP::const_pair_iterator pi ;
+        for ( pi = m_Reader->m_RIP.PairArray.begin(); pi != m_Reader->m_RIP.PairArray.end() && ASDCP_SUCCESS(result); pi++ )
+        {
+          if (pi->BodySID != GSBodySID)
+          {
+            continue;
+          }
+          result = m_Reader->m_File.Seek((*pi).ByteOffset);
+          if (!ASDCP_SUCCESS(result))
+            return result;
+
+          Partition TmpPart(m_Reader->m_Dict);
+          result = TmpPart.InitFromFile(m_Reader->m_File);
+          if (!ASDCP_SUCCESS(result))
+            return result;
+
+          KLReader Reader;
+          result = Reader.ReadKLFromFile(m_Reader->m_File);
+          if (!ASDCP_SUCCESS(result))
+            return result;
+          // extend buffer capacity to hold the data
+          result = FrameBuffer.Capacity((ui32_t)Reader.Length());
+          if (!ASDCP_SUCCESS(result))
+            return result;
+          // read the data into the supplied buffer
+          ui32_t read_count;
+          result = m_Reader->m_File.Read(FrameBuffer.Data(), (ui32_t)Reader.Length(), &read_count);
+          if (!ASDCP_SUCCESS(result))
+            return result;
+          if (read_count != Reader.Length())
+            return RESULT_READFAIL;
+
+          FrameBuffer.Size(read_count);
+          break; // found the partition and processed it
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
+Result_t
+AS_02::IAB::MXFWriter::WriteMetadata(const std::string &trackLabel, const std::string &mimeType, const std::string &dataDescription, const ASDCP::FrameBuffer& metadata_buf)
+{
+  // In this section add Descriptive Metadata elements to the Header
+  //
+
+  m_Writer->m_HeaderPart.m_Preface->DMSchemes.push_back(UL(m_Writer->m_Dict->ul(MDD_MXFTextBasedFramework))); // See section 7.1 Table 3 ST RP 2057
+
+  // DM Static Track and Static Track are the same
+  StaticTrack* NewTrack = new StaticTrack(m_Writer->m_Dict);
+  m_Writer->m_HeaderPart.AddChildObject(NewTrack);
+  m_Writer->m_FilePackage->Tracks.push_back(NewTrack->InstanceUID);
+  NewTrack->TrackName = trackLabel;
+  NewTrack->TrackID = m_NextTrackID++;
+
+  Sequence* Seq = new Sequence(m_Writer->m_Dict);
+  m_Writer->m_HeaderPart.AddChildObject(Seq);
+  NewTrack->Sequence = Seq->InstanceUID;
+  Seq->DataDefinition = UL(m_Writer->m_Dict->ul(MDD_DescriptiveMetaDataDef));
+  Seq->Duration.set_has_value();
+  m_Writer->m_DurationUpdateList.push_back(&Seq->Duration.get());
+
+  DMSegment* Segment = new DMSegment(m_Writer->m_Dict);
+  m_Writer->m_HeaderPart.AddChildObject(Segment);
+  Seq->StructuralComponents.push_back(Segment->InstanceUID);
+  Segment->EventComment = "SMPTE RP 2057 Generic Stream Text-Based Set";
+  Segment->DataDefinition = UL(m_Writer->m_Dict->ul(MDD_DescriptiveMetaDataDef));
+  if (!Segment->Duration.empty())
+  {
+    m_Writer->m_DurationUpdateList.push_back(&Segment->Duration.get());
+  }
+
+  TextBasedDMFramework* framework = new TextBasedDMFramework(m_Writer->m_Dict);
+  m_Writer->m_HeaderPart.AddChildObject(framework);
+  Segment->DMFramework = framework->InstanceUID;
+
+  GenericStreamTextBasedSet* set = new GenericStreamTextBasedSet(m_Writer->m_Dict);
+  m_Writer->m_HeaderPart.AddChildObject(set);
+  framework->ObjectRef = set->InstanceUID;
+
+  set->TextDataDescription = dataDescription;
+  set->PayloadSchemeID = UL(m_Writer->m_Dict->ul(MDD_MXFTextBasedFramework));
+  set->TextMIMEMediaType = mimeType;
+  set->RFC5646TextLanguageCode = "en";
+  set->GenericStreamSID = m_GenericStreamID;
+
+  // before we set up a new partition
+  // make sure we write out the Body partition index
+  m_Writer->FlushIndexPartition();
+
+  //
+  // This section sets up the Generic Streaming Partition where we are storing the text-based metadata
+  //
+  Kumu::fpos_t here = m_Writer->m_File.Tell();
+
+  // create generic stream partition header
+  static UL GenericStream_DataElement(m_Writer->m_Dict->ul(MDD_GenericStream_DataElement));
+  ASDCP::MXF::Partition GSPart(m_Writer->m_Dict);
+
+  GSPart.MajorVersion = m_Writer->m_HeaderPart.MajorVersion;
+  GSPart.MinorVersion = m_Writer->m_HeaderPart.MinorVersion;
+  GSPart.ThisPartition = here;
+  GSPart.PreviousPartition = m_Writer->m_RIP.PairArray.back().ByteOffset;
+  GSPart.OperationalPattern = m_Writer->m_HeaderPart.OperationalPattern;
+  GSPart.BodySID = m_GenericStreamID++;
+
+  m_Writer->m_RIP.PairArray.push_back(RIP::PartitionPair(GSPart.BodySID, here));
+  GSPart.EssenceContainers = m_Writer->m_HeaderPart.EssenceContainers;
+
+  static UL gs_part_ul(m_Writer->m_Dict->ul(MDD_GenericStreamPartition));
+  GSPart.WriteToFile(m_Writer->m_File, gs_part_ul);
+
+
+
+  Result_t result = Write_EKLV_Packet(m_Writer->m_File, *(m_Writer->m_Dict), m_Writer->m_HeaderPart, m_Writer->m_Info, m_Writer->m_CtFrameBuf, m_Writer->m_FramesWritten,
+                             m_Writer->m_StreamOffset, metadata_buf, GenericStream_DataElement.Value(), MXF_BER_LENGTH, 0, 0);
+
+  return result;
+}
+
 
 //
 // end AS_02_IAB.cpp
