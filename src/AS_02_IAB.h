@@ -155,12 +155,6 @@ namespace AS_02 {
       Result_t FinalizeClip();
       Result_t WriteMetadata(const std::string &trackLabel, const std::string &mimeType, const std::string &dataDescription, const ASDCP::FrameBuffer& metadata_buf);
 
-      // Writes an XML text document to the MXF file as per RP 2057. If the
-      // optional AESEncContext argument is present, the document is encrypted
-      // prior to writing. Fails if the file is not open, is finalized, or an
-      // operating system error occurs.
-      Result_t AddDmsGenericPartUtf8Text(const ASDCP::FrameBuffer& frame_buffer, ASDCP::AESEncContext* enc = 0, ASDCP::HMACContext* hmac = 0);
-
       ui32_t m_GenericStreamID;
       ui32_t m_NextTrackID;
     };
@@ -231,12 +225,8 @@ namespace AS_02 {
        */
       Result_t OpenRead(const std::string& filename);
 
-      Result_t GetMDObjectByType(MDD_t ObjectID, InterchangeObject* Object) {
-        return this->m_Reader->m_HeaderPart.GetMDObjectByType(this->m_Reader->m_Dict->Type(ObjectID).ul, &Object);
-      }
-      Result_t GetMDObjectsByType(MDD_t ObjectID, std::list<InterchangeObject*>& ObjectList) {
-        return this->m_Reader->m_HeaderPart.GetMDObjectsByType(this->m_Reader->m_Dict->Type(ObjectID).ul, ObjectList);
-      };
+      Result_t GetMDObjectByType(ASDCP::MDD_t ObjectID, ASDCP::MXF::InterchangeObject* Object);
+      Result_t GetMDObjectsByType(ASDCP::MDD_t ObjectID, std::list<ASDCP::MXF::InterchangeObject*>& ObjectList);
 
       /**
        * Closes the IAB Track File.

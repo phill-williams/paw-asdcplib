@@ -714,7 +714,7 @@ AS_02::IAB::MXFReader::Reset() {
 Result_t
 AS_02::IAB::MXFReader::ReadMetadata(const std::string &description, std::string &mimeType, ASDCP::FrameBuffer& FrameBuffer)
 {
-  if ( ! m_Reader->m_File.IsOpen() )
+  if ( ! m_Reader->m_File->IsOpen() )
   {
     return RESULT_INIT;
   }
@@ -740,17 +740,17 @@ AS_02::IAB::MXFReader::ReadMetadata(const std::string &description, std::string 
           {
             continue;
           }
-          result = m_Reader->m_File.Seek((*pi).ByteOffset);
+          result = m_Reader->m_File->Seek((*pi).ByteOffset);
           if (!ASDCP_SUCCESS(result))
             return result;
 
           Partition TmpPart(m_Reader->m_Dict);
-          result = TmpPart.InitFromFile(m_Reader->m_File);
+          result = TmpPart.InitFromFile(*m_Reader->m_File);
           if (!ASDCP_SUCCESS(result))
             return result;
 
           KLReader Reader;
-          result = Reader.ReadKLFromFile(m_Reader->m_File);
+          result = Reader.ReadKLFromFile(*m_Reader->m_File);
           if (!ASDCP_SUCCESS(result))
             return result;
           // extend buffer capacity to hold the data
@@ -759,7 +759,7 @@ AS_02::IAB::MXFReader::ReadMetadata(const std::string &description, std::string 
             return result;
           // read the data into the supplied buffer
           ui32_t read_count;
-          result = m_Reader->m_File.Read(FrameBuffer.Data(), (ui32_t)Reader.Length(), &read_count);
+          result = m_Reader->m_File->Read(FrameBuffer.Data(), (ui32_t)Reader.Length(), &read_count);
           if (!ASDCP_SUCCESS(result))
             return result;
           if (read_count != Reader.Length())
@@ -773,6 +773,14 @@ AS_02::IAB::MXFReader::ReadMetadata(const std::string &description, std::string 
   }
 
   return result;
+}
+
+Result_t AS_02::IAB::MXFReader::GetMDObjectByType(ASDCP::MDD_t ObjectID, ASDCP::MXF::InterchangeObject* Object) {
+    return this->m_Reader->m_HeaderPart.GetMDObjectByType(this->m_Reader->m_Dict->Type(ObjectID).ul, &Object);
+}
+
+Result_t AS_02::IAB::MXFReader::GetMDObjectsByType(ASDCP::MDD_t ObjectID, std::list<ASDCP::MXF::InterchangeObject*>& ObjectList) {
+    return this->m_Reader->m_HeaderPart.GetMDObjectsByType(this->m_Reader->m_Dict->Type(ObjectID).ul, ObjectList);
 }
 
 Result_t
@@ -828,7 +836,7 @@ AS_02::IAB::MXFWriter::WriteMetadata(const std::string &trackLabel, const std::s
   //
   // This section sets up the Generic Streaming Partition where we are storing the text-based metadata
   //
-  Kumu::fpos_t here = m_Writer->m_File.Tell();
+  Kumu::fpos_t here = m_Writer->m_File.TellPosition();
 
   // create generic stream partition header
   static UL GenericStream_DataElement(m_Writer->m_Dict->ul(MDD_GenericStream_DataElement));

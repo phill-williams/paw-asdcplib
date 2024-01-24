@@ -296,7 +296,12 @@ write_IAB_file(CommandOptions& Options)
 
   if ( ASDCP_SUCCESS(result) )
     {
-      result = Writer.Finalize();
+      result = Writer.FinalizeClip();
+    }
+
+    if ( ASDCP_SUCCESS(result) )
+    {
+        result = Writer.FinalizeMxf();
     }
 
   return result;
